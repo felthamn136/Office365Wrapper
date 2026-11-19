@@ -247,10 +247,21 @@ fn parse_results(data: &Value, entity: &str) -> Result<(Vec<SearchItem>, bool), 
     let mut more = false;
     for container in containers {
         more |= container["moreResultsAvailable"].as_bool() == Some(true);
-        for hit in container["hits"]
-            .as_array()
-            .ok_or("Microsoft Graph returned an unexpected search results container.")?
-        {
+        let hits = match container.get("hits") {
+            Some(Value::Array(hits)) => hits,
+            None | Some(Value::Null)
+                if container["total"].as_u64() == Some(0)
+                    && container["moreResultsAvailable"].as_bool() == Some(false) =>
+            {
+                continue;
+            }
+            _ => {
+                return Err(
+                    "Microsoft Graph returned an unexpected search results container.".into(),
+                )
+            }
+        };
+        for hit in hits {
             let resource = &hit["resource"];
             let title = resource[if entity == "driveItem" {
                 "name"
@@ -276,13 +287,26 @@ async fn search_category(
     label: &'static str,
 ) -> SearchGroup {
     let result = async {
-        let response = client.post("https://graph.microsoft.com/v1.0/search/query")
-            .bearer_auth(token).json(&json!({"requests": [{"entityTypes": [entity], "query": {"queryString": query}, "from": 0, "size": 25}]}))
-            .send().await.map_err(|e| format!("Search request failed: {e}"))?;
-        if !response.status().is_success() { return Err(format!("Microsoft Graph returned HTTP {}.", response.status().as_u16())); }
-        let data = response.json::<Value>().await.map_err(|e| format!("Invalid Graph response: {e}"))?;
+        let response = client
+            .post("https://graph.microsoft.com/v1.0/search/query")
+            .bearer_auth(token)
+            .json(&json!({"requests": [{"entityTypes": [entity], "query": {"queryString": query}, "from": 0, "size": 25}]}))
+            .send()
+            .await
+            .map_err(|e| format!("Search request failed: {e}"))?;
+        if !response.status().is_success() {
+            return Err(format!(
+                "Microsoft Graph returned HTTP {}.",
+                response.status().as_u16()
+            ));
+        }
+        let data = response
+            .json::<Value>()
+            .await
+            .map_err(|e| format!("Invalid Graph response: {e}"))?;
         parse_results(&data, entity)
-    }.await;
+    }
+    .await;
     match result {
         Ok((results, more)) => SearchGroup {
             label,
@@ -357,6 +381,29 @@ mod tests {
         assert!(items[1].url.is_none());
         assert!(items[2].url.is_none());
         assert!(parse_results(&json!({"value": []}), "message").is_err());
+    }
+
+    #[test]
+    fn accepts_empty_graph_results_without_hits_but_rejects_malformed_containers() {
+        for hits in [None, Some(Value::Null), Some(json!([]))] {
+            let mut container = json!({"total": 0, "moreResultsAvailable": false});
+            if let Some(hits) = hits {
+                container["hits"] = hits;
+            }
+            let data = json!({"value": [{"hitsContainers": [container]}]});
+            let (items, more) = parse_results(&data, "message").unwrap();
+            assert!(items.is_empty());
+            assert!(!more);
+        }
+
+        for container in [
+            json!({"total": 1, "moreResultsAvailable": false}),
+            json!({"total": 0, "moreResultsAvailable": true}),
+            json!({"total": 0, "moreResultsAvailable": false, "hits": "invalid"}),
+        ] {
+            let data = json!({"value": [{"hitsContainers": [container]}]});
+            assert!(parse_results(&data, "message").is_err());
+        }
     }
 
     #[tokio::test(flavor = "current_thread")]

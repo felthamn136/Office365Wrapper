@@ -2,6 +2,7 @@ mod graph;
 
 use std::{
     os::unix::fs::DirBuilderExt,
+    process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
 use tauri::{
@@ -20,6 +21,23 @@ struct AppState {
 
 fn secure_url(url: &Url) -> bool {
     url.scheme() == "https" && url.username().is_empty() && url.password().is_none()
+}
+
+fn outlook_browser_url(url: &Url) -> Option<&'static str> {
+    if !secure_url(url) || url.port().is_some() {
+        return None;
+    }
+    match url.host_str()? {
+        "outlook.office365.com" | "outlook.office.com" => Some("https://outlook.office.com/"),
+        "outlook.live.com" => Some("https://outlook.live.com/mail/"),
+        _ => None,
+    }
+}
+
+fn open_outlook_in_browser(url: &Url) -> std::io::Result<()> {
+    let browser_url = outlook_browser_url(url).expect("validated Outlook URL");
+    Command::new("xdg-open").arg(browser_url).spawn()?;
+    Ok(())
 }
 
 fn microsoft_url(url: &Url) -> bool {
@@ -124,7 +142,16 @@ fn create_window(
         .title("Office Dashboard")
         .inner_size(1200.0, 800.0)
         .data_directory(profile)
-        .on_navigation(allow_navigation)
+        .on_navigation(|url| {
+            if outlook_browser_url(url).is_some() {
+                if let Err(error) = open_outlook_in_browser(url) {
+                    eprintln!("Could not open Outlook in the default browser: {error}");
+                }
+                false
+            } else {
+                allow_navigation(url)
+            }
+        })
         .on_new_window(move |url, features| {
             let opener = features
                 .opener()
@@ -193,7 +220,13 @@ fn initial_url() -> Result<WebviewUrl, String> {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let initial = initial_url().map_err(std::io::Error::other)?;
+    let initial = match initial_url().map_err(std::io::Error::other)? {
+        WebviewUrl::External(url) if outlook_browser_url(&url).is_some() => {
+            open_outlook_in_browser(&url)?;
+            WebviewUrl::App("dashboard.html".into())
+        }
+        initial => initial,
+    };
     tauri::Builder::default()
         .manage(AppState {
             notifications: AtomicBool::new(false),
@@ -302,5 +335,26 @@ mod tests {
         assert!(!notification_origin(
             &Url::parse("https://untrusted.outlook.office.com/").unwrap()
         ));
+    }
+
+    #[test]
+    fn opens_only_supported_outlook_hosts_in_the_default_browser() {
+        assert_eq!(
+            outlook_browser_url(&Url::parse("https://outlook.office365.com/").unwrap()),
+            Some("https://outlook.office.com/")
+        );
+        assert_eq!(
+            outlook_browser_url(&Url::parse("https://outlook.live.com/mail/").unwrap()),
+            Some("https://outlook.live.com/mail/")
+        );
+        for value in [
+            "http://outlook.office.com/",
+            "https://outlook.office.com.example.com/",
+            "https://outlook.office.com:444/",
+            "https://user@outlook.office.com/",
+            "https://www.microsoft365.com/",
+        ] {
+            assert_eq!(outlook_browser_url(&Url::parse(value).unwrap()), None);
+        }
     }
 }
