@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Dashboard | Office365Wrapper</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="search.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">O</span> Office365Wrapper</div>
+    <span class="topbar-label">Your workspace</span>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="heading">
+      <p class="eyebrow">YOUR WORKSPACE, IN ONE PLACE</p>
+      <h1 id="heading">Good to have you here.</h1>
+      <p class="intro-text">Pick up where you left off. Open your Microsoft apps below, and use the Navigate menu to return here at any time.</p>
+    </section>
+
+    <section class="search-panel" aria-labelledby="search-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">MICROSOFT GRAPH</p>
+          <h2 id="search-heading">Search your workspace</h2>
+        </div>
+      </div>
+      <p class="search-description">Search mail, calendar events, and accessible files with a work or school account.</p>
+      <form id="search-form" class="search-form">
+        <label class="sr-only" for="search-query">Search mail, calendar, and files</label>
+        <input id="search-query" type="search" maxlength="200" required placeholder="Search your workspace">
+        <button id="search-submit" type="submit">Search</button>
+      </form>
+      <div class="search-actions">
+        <span id="search-status" role="status" aria-live="polite"></span>
+        <button id="search-signout" type="button" class="text-button">Sign out of Graph</button>
+      </div>
+      <div id="search-results" class="search-results"></div>
+    </section>
+
+    <section aria-labelledby="apps-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">QUICK ACCESS</p>
+          <h2 id="apps-heading">Your apps</h2>
+        </div>
+        <span class="section-note">Opens in this window</span>
+      </div>
+
+      <div class="app-grid">
+        <a class="app-card m365" href="https://www.microsoft365.com/">
+          <span class="app-icon" aria-hidden="true">M</span>
+          <span class="card-content"><span class="card-name">Microsoft 365</span><span class="card-description">Your files and apps, all together.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card outlook" href="https://outlook.office365.com/">
+          <span class="app-icon" aria-hidden="true">O</span>
+          <span class="card-content"><span class="card-name">Outlook</span><span class="card-description">Work or school email and calendar.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card personal" href="https://outlook.live.com/mail/">
+          <span class="app-icon" aria-hidden="true">O</span>
+          <span class="card-content"><span class="card-name">Outlook personal</span><span class="card-description">Your personal inbox and calendar.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="productivity" aria-labelledby="productivity-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">CREATE AND ORGANIZE</p>
+          <h2 id="productivity-heading">Productivity apps</h2>
+        </div>
+        <span class="section-note">Opens in this window</span>
+      </div>
+
+      <div class="app-grid productivity-grid">
+        <a class="app-card word" href="https://word.office.com/">
+          <span class="app-icon" aria-hidden="true">W</span>
+          <span class="card-content"><span class="card-name">Word</span><span class="card-description">Write and edit documents.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card excel" href="https://excel.office.com/">
+          <span class="app-icon" aria-hidden="true">X</span>
+          <span class="card-content"><span class="card-name">Excel</span><span class="card-description">Work with spreadsheets.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card powerpoint" href="https://powerpoint.office.com/">
+          <span class="app-icon" aria-hidden="true">P</span>
+          <span class="card-content"><span class="card-name">PowerPoint</span><span class="card-description">Create and edit presentations.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card onenote" href="https://onenote.office.com/">
+          <span class="app-icon" aria-hidden="true">N</span>
+          <span class="card-content"><span class="card-name">OneNote</span><span class="card-description">Keep notes and notebooks organized.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card copilot" href="https://copilot.cloud.microsoft/">
+          <span class="app-icon" aria-hidden="true">C</span>
+          <span class="card-content"><span class="card-name">Copilot</span><span class="card-description">Get help with ideas and tasks.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+        <a class="app-card todo" href="https://to-do.office.com/">
+          <span class="app-icon" aria-hidden="true">T</span>
+          <span class="card-content"><span class="card-name">Microsoft To Do</span><span class="card-description">Organize your tasks and lists.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
+      </div>
+    </section>
+
+    <aside class="notice">
+      <span class="notice-icon" aria-hidden="true">i</span>
+      <div>
+        <h2>Make it yours</h2>
+        <p>Sign in on each Microsoft page as needed. To enable website alerts, use the Notifications menu and reload the page.</p>
+      </div>
+    </aside>
+    <p class="footer-note">Shortcuts open Microsoft websites. Search retrieves results from Microsoft Graph.</p>
+  </main>
+</body>
+</html>
