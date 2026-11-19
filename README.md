@@ -57,6 +57,12 @@ GStreamer media plugins. AppImages may need FUSE 2; if FUSE is unavailable, pass
 `--appimage-extract-and-run` to the AppImage instead. Desktop-menu integration
 depends on the desktop environment or an AppImage integration tool.
 
+To use Gear Lever, open a copy of the AppImage from outside Gear Lever's
+AppImages folder, then choose its run or integration option. Gear Lever may
+move the selected file during integration, so keep the original build artifact
+separate. Copying an AppImage directly into Gear Lever's AppImages folder may
+make it appear installed without creating a launcher.
+
 Build on the oldest Linux distribution you intend to support: an AppImage
 built on a newer system may not run on older systems because of glibc
 compatibility. Rebuild the AppImage to pick up WebKitGTK security updates.

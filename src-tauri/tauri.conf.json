@@ -16,6 +16,8 @@
   "bundle": {
     "active": true,
     "targets": ["appimage"],
+    "category": "Productivity",
+    "shortDescription": "Microsoft 365 on Linux",
     "icon": ["icons/128x128.png", "icons/256x256.png", "icons/512x512.png"],
     "linux": {
       "appimage": {
