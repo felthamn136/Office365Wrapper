@@ -146,7 +146,9 @@ async fn callback(listener: &TcpListener, expected_state: &str) -> Result<String
         } else {
             ("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nInvalid sign-in callback.", None)
         };
-        let _ = stream.write_all(response.as_bytes()).await;
+        if let Err(error) = stream.write_all(response.as_bytes()).await {
+            eprintln!("Could not send the sign-in callback response: {error}");
+        }
         if let Some(result) = result {
             return result;
         }
@@ -315,12 +317,14 @@ pub async fn graph_search(
     {
         *token = Some(authenticate(&state.client).await?);
     }
+    require_dashboard(&window)?;
     let access_token = &token.as_ref().expect("authenticated token").access_token;
     let (mail, calendar, files) = tokio::join!(
         search_category(&state.client, access_token, query, "message", "Mail"),
         search_category(&state.client, access_token, query, "event", "Calendar"),
         search_category(&state.client, access_token, query, "driveItem", "Files"),
     );
+    require_dashboard(&window)?;
     Ok(vec![mail, calendar, files])
 }
 

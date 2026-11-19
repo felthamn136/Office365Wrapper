@@ -28,6 +28,8 @@ cargo build --release --manifest-path src-tauri/Cargo.toml
 
 The build produces a native executable; it does not create an installer.
 Keep WebKitGTK updated through your distribution for security fixes.
+If the project filesystem cannot support Cargo's build files, set
+`CARGO_TARGET_DIR` to a directory on a local filesystem before building.
 
 The Office Dashboard opens by default and provides shortcuts to Microsoft 365,
 Outlook, OneDrive, Word, Excel, PowerPoint, OneNote, Copilot, and To Do on the web. These
@@ -127,3 +129,6 @@ On filesystems without symlink support, use `npm install --no-bin-links`. On
 Linux/Wayland, `npm run start:wayland` uses the Chromium Wayland flags.
 Use `npm start -- --outlook` (or `--microsoft365` / `--outlook-personal`) for a
 direct launch. Electron keeps a separate browser profile and Graph session.
+On Windows, when running Electron from source, pin
+`node_modules\electron\dist\electron.exe` to the Start menu for notifications.
+Packaged apps need a Start menu shortcut with the appropriate AppUserModelID.
