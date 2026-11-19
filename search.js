@@ -6,10 +6,10 @@ const submit = document.getElementById('search-submit');
 const signOut = document.getElementById('search-signout');
 const status = document.getElementById('search-status');
 const results = document.getElementById('search-results');
-const graphSearch = window.graphSearch || (window.__TAURI__ && {
+const graphSearch = window.__TAURI__ && {
   search: (value) => window.__TAURI__.core.invoke('graph_search', { query: value }),
   signOut: () => window.__TAURI__.core.invoke('graph_sign_out'),
-});
+};
 
 function setBusy(busy) {
   submit.disabled = busy;

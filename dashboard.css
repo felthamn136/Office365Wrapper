@@ -7,6 +7,15 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
+body::after {
+  content: "";
+  position: fixed;
+  inset: 52px 0 0;
+  z-index: 1;
+  pointer-events: none;
+  background: url("dashboard-watermark.png") center / min(48vw, 360px) no-repeat;
+  opacity: .09;
+}
 .topbar {
   display: flex;
   justify-content: space-between;

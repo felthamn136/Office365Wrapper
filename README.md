@@ -1,8 +1,7 @@
 # Office365Wrapper
 
-A desktop shell for [Microsoft 365](https://www.microsoft365.com/) and Outlook
-on the web. Linux has a Rust/Tauri build using WebKitGTK; the existing Electron
-version is also available.
+A Linux desktop shell for [Microsoft 365](https://www.microsoft365.com/) and
+Outlook on the web, built with Rust/Tauri and WebKitGTK.
 
 ## Requirements
 
@@ -93,7 +92,7 @@ out or switch accounts using the website's account menu.
 
 The Tauri app stores its WebKit profile and sign-in cookies in
 `~/.local/share/com.office365wrapper.dashboard/webkit` (or under
-`$XDG_DATA_HOME`). It does not import Electron or WebView2 cookies, so sign in
+`$XDG_DATA_HOME`). It does not import cookies from previous versions, so sign in
 again after switching. The shell does not collect passwords. Organizational
 policies may restrict sign-in from embedded browsers.
 
@@ -114,21 +113,3 @@ Microsoft pages can open HTTPS links (including app-launcher links) and
 new windows, and insecure navigation is blocked. Popup windows close with their
 opener. Camera, microphone, and other website permissions remain blocked.
 Closing all windows exits the app.
-
-## Electron version
-
-The original Electron version remains available for Windows, macOS, and Linux
-with Node.js 22.12 or later:
-
-```sh
-npm install
-npm start
-```
-
-On filesystems without symlink support, use `npm install --no-bin-links`. On
-Linux/Wayland, `npm run start:wayland` uses the Chromium Wayland flags.
-Use `npm start -- --outlook` (or `--microsoft365` / `--outlook-personal`) for a
-direct launch. Electron keeps a separate browser profile and Graph session.
-On Windows, when running Electron from source, pin
-`node_modules\electron\dist\electron.exe` to the Start menu for notifications.
-Packaged apps need a Start menu shortcut with the appropriate AppUserModelID.
