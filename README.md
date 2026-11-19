@@ -1,5 +1,7 @@
 # Office365Wrapper
 
+![Office365Wrapper: Microsoft 365 on Linux](./readme-banner.png)
+
 A Linux desktop shell for [Microsoft 365](https://www.microsoft365.com/) and
 Outlook on the web, built with Rust/Tauri and WebKitGTK.
 
