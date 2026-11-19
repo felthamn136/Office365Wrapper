@@ -33,8 +33,8 @@ If the project filesystem cannot support Cargo's build files, set
 
 ### AppImage
 
-A prebuilt x86-64 [Office Dashboard AppImage](./Office-Dashboard-0.1.0-x86_64.AppImage)
-is available in the repository root.
+A prebuilt x86-64 [Office Dashboard AppImage](./dist/Office-Dashboard-0.1.0-x86_64.AppImage)
+is available in the `dist` folder.
 
 Install `patchelf` and the GStreamer plugins needed for media playback on the
 build system (for example, `gstreamer1.0-plugins-base` and
