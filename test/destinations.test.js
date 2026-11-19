@@ -19,6 +19,13 @@ test('rejects unknown and multiple arguments', () => {
   );
 });
 
+test('accepts Wayland switches alongside a destination', () => {
+  assert.equal(destinationFromArgs(['--ozone-platform=wayland', '--disable-vulkan']).file, 'dashboard.html');
+  assert.equal(destinationFromArgs(['--ozone-platform=wayland', '--disable-vulkan', '--outlook']).url,
+    'https://outlook.office365.com/');
+  assert.throws(() => destinationFromArgs(['--disable-vulkan', '--other']), /Unknown argument/);
+});
+
 test('rejects the removed Teams launch option', () => {
   assert.throws(() => destinationFromArgs(['--teams']), /Unknown argument/);
 });

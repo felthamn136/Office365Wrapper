@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Office Dashboard",
+  "version": "0.1.0",
+  "identifier": "com.office365wrapper.dashboard",
+  "build": {
+    "frontendDist": ["../dashboard.html", "../dashboard.css", "../search.js"]
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src ipc: http://ipc.localhost; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

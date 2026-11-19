@@ -13,6 +13,7 @@ test('dashboard links open the supported Microsoft web apps', () => {
     destinations.microsoft365.url,
     destinations.outlook.url,
     destinations.outlookPersonal.url,
+    'https://go.microsoft.com/fwlink/p/?LinkID=2119709',
     'https://word.office.com/',
     'https://excel.office.com/',
     'https://powerpoint.office.com/',

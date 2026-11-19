@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
-  <title>Dashboard | Office365Wrapper</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost; base-uri 'none'; form-action 'none'">
+  <title>Office Dashboard | Office365Wrapper</title>
   <link rel="stylesheet" href="dashboard.css">
   <script src="search.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">O</span> Office365Wrapper</div>
-    <span class="topbar-label">Your workspace</span>
+    <span class="topbar-label">Office Dashboard</span>
   </header>
 
   <main>
@@ -66,19 +66,11 @@
           <span class="card-content"><span class="card-name">Outlook personal</span><span class="card-description">Your personal inbox and calendar.</span></span>
           <span class="arrow" aria-hidden="true">-&gt;</span>
         </a>
-      </div>
-    </section>
-
-    <section class="productivity" aria-labelledby="productivity-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">CREATE AND ORGANIZE</p>
-          <h2 id="productivity-heading">Productivity apps</h2>
-        </div>
-        <span class="section-note">Opens in this window</span>
-      </div>
-
-      <div class="app-grid productivity-grid">
+        <a class="app-card onedrive" href="https://go.microsoft.com/fwlink/p/?LinkID=2119709">
+          <span class="app-icon" aria-hidden="true">D</span>
+          <span class="card-content"><span class="card-name">OneDrive</span><span class="card-description">Access your cloud files.</span></span>
+          <span class="arrow" aria-hidden="true">-&gt;</span>
+        </a>
         <a class="app-card word" href="https://word.office.com/">
           <span class="app-icon" aria-hidden="true">W</span>
           <span class="card-content"><span class="card-name">Word</span><span class="card-description">Write and edit documents.</span></span>

@@ -6,6 +6,10 @@ const submit = document.getElementById('search-submit');
 const signOut = document.getElementById('search-signout');
 const status = document.getElementById('search-status');
 const results = document.getElementById('search-results');
+const graphSearch = window.graphSearch || (window.__TAURI__ && {
+  search: (value) => window.__TAURI__.core.invoke('graph_search', { query: value }),
+  signOut: () => window.__TAURI__.core.invoke('graph_sign_out'),
+});
 
 function setBusy(busy) {
   submit.disabled = busy;
@@ -54,7 +58,7 @@ function showResults(groups) {
   }
 }
 
-if (!window.graphSearch) {
+if (!graphSearch) {
   submit.disabled = true;
   signOut.disabled = true;
   status.textContent = 'Graph search is available in the desktop app.';
@@ -69,11 +73,11 @@ if (!window.graphSearch) {
     results.replaceChildren();
     status.textContent = 'Signing in if needed and searching...';
     try {
-      const groups = await window.graphSearch.search(query.value);
+      const groups = await graphSearch.search(query.value);
       showResults(groups);
       status.textContent = 'Search complete. Up to 25 results per category are shown.';
     } catch (error) {
-      status.textContent = `Search failed: ${error.message}`;
+      status.textContent = `Search failed: ${error.message || error}`;
     } finally {
       setBusy(false);
     }
@@ -82,11 +86,11 @@ if (!window.graphSearch) {
   signOut.addEventListener('click', async () => {
     setBusy(true);
     try {
-      await window.graphSearch.signOut();
+      await graphSearch.signOut();
       results.replaceChildren();
       status.textContent = 'Graph session cleared. Website and browser sign-in are unchanged.';
     } catch (error) {
-      status.textContent = `Sign-out failed: ${error.message}`;
+      status.textContent = `Sign-out failed: ${error.message || error}`;
     } finally {
       setBusy(false);
     }

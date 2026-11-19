@@ -6,6 +6,7 @@ const { pathToFileURL } = require('node:url');
 const { destinationFromArgs, destinations } = require('./destinations');
 const { configureNotifications } = require('./notifications');
 const { createGraphSearch } = require('./graph-search');
+const { configureWebContents } = require('./window-policy');
 
 async function start() {
   const destination = destinationFromArgs(process.argv.slice(app.isPackaged ? 1 : 2));
@@ -38,7 +39,7 @@ async function start() {
     if (event.sender !== window.webContents ||
         event.senderFrame !== window.webContents.mainFrame ||
         event.senderFrame.url !== dashboardUrl) {
-      throw new Error('Graph access is available only from the dashboard.');
+      throw new Error('Graph access is available only from the Office Dashboard.');
     }
   }
   ipcMain.handle('graph:search', (event, query) => {
@@ -50,12 +51,7 @@ async function start() {
     return graphSearch.signOut();
   });
 
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  window.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('https://')) {
-      event.preventDefault();
-    }
-  });
+  configureWebContents(window.webContents);
 
   let navigationId = 0;
   const navigate = async (target) => {
@@ -80,7 +76,7 @@ async function start() {
     {
       label: 'Navigate',
       submenu: [
-        { label: 'Dashboard', click: () => navigate(destinations.dashboard) },
+        { label: 'Office Dashboard', click: () => navigate(destinations.dashboard) },
         { label: 'Microsoft 365', click: () => navigate(destinations.microsoft365) },
         { label: 'Outlook (work or school)', click: () => navigate(destinations.outlook) },
         { label: 'Outlook (personal)', click: () => navigate(destinations.outlookPersonal) },

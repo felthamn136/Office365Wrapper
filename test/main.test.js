@@ -8,8 +8,9 @@ const { test } = require('node:test');
 const vm = require('node:vm');
 const { destinationFromArgs, destinations } = require('../destinations');
 const { configureNotifications } = require('../notifications');
+const { configureWebContents } = require('../window-policy');
 
-test('opens Outlook in an isolated window and blocks popups and insecure navigation', async () => {
+test('opens Outlook in an isolated window and restricts navigation', async () => {
   const handlers = {};
   const sessionHandlers = {};
   const ipcHandlers = {};
@@ -20,6 +21,7 @@ test('opens Outlook in an isolated window and blocks popups and insecure navigat
       this.options = options;
       this.webContents = {
         mainFrame: { url: pathToFileURL(path.join(__dirname, '../dashboard.html')).href },
+        getURL: () => this.url || this.webContents.mainFrame.url,
         setWindowOpenHandler: (handler) => { handlers.open = handler; },
         on: (event, handler) => { handlers[event] = handler; },
       };
@@ -69,6 +71,7 @@ test('opens Outlook in an isolated window and blocks popups and insecure navigat
     require: (name) => {
       if (name === 'electron') return electron;
       if (name === './notifications') return { configureNotifications };
+      if (name === './window-policy') return { configureWebContents };
       if (name === 'node:path') return path;
       if (name === 'node:url') return { pathToFileURL };
       if (name === './graph-search') return { createGraphSearch: () => ({
@@ -92,8 +95,8 @@ test('opens Outlook in an isolated window and blocks popups and insecure navigat
   assert.throws(() => ipcHandlers['graph:search']({
     sender: window.webContents,
     senderFrame: { url: 'https://outlook.office.com/' },
-  }, 'report'), /only from the dashboard/);
-  assert.equal(handlers.open().action, 'deny');
+  }, 'report'), /only from the Office Dashboard/);
+  assert.equal(handlers.open({ url: 'https://word.office.com/' }).action, 'allow');
   let prevented = false;
   handlers['will-navigate']({ preventDefault: () => { prevented = true; } }, 'file:///tmp/test');
   assert.equal(prevented, true);
@@ -113,8 +116,9 @@ test('opens Outlook in an isolated window and blocks popups and insecure navigat
   assert.equal(sessionHandlers.check(null, 'notifications', 'https://outlook.office.com', notificationDetails), false);
 
   const navigation = menu.find((item) => item.label === 'Navigate').submenu;
-  await navigation.find((item) => item.label === 'Dashboard').click();
+  await navigation.find((item) => item.label === 'Office Dashboard').click();
   assert.equal(window.file, path.join(__dirname, '../dashboard.html'));
+  assert.equal(window.title, 'Office Dashboard');
   await navigation.find((item) => item.label === 'Outlook (personal)').click();
   assert.equal(window.url, 'https://outlook.live.com/mail/');
   assert.equal(window.title, 'Outlook');
@@ -138,4 +142,41 @@ test('opens Outlook in an isolated window and blocks popups and insecure navigat
   await navigation.find((item) => item.label === 'Outlook (personal)').click();
   assert.equal(reportedError.title, 'Navigation error');
   assert.match(reportedError.message, /network unavailable/);
+});
+
+test('permits Microsoft launcher windows with secure navigation and nested restrictions', () => {
+  const createContents = (url) => {
+    const handlers = {};
+    return {
+      url,
+      handlers,
+      getURL() { return this.url; },
+      setWindowOpenHandler(handler) { handlers.open = handler; },
+      on(event, handler) { handlers[event] = handler; },
+    };
+  };
+  const contents = createContents('https://www.microsoft365.com/');
+  configureWebContents(contents);
+  const open = contents.handlers.open({ url: 'https://tenant.sharepoint.com/' });
+  assert.equal(open.action, 'allow');
+  assert.deepEqual(open.overrideBrowserWindowOptions.webPreferences, {
+    nodeIntegration: false, contextIsolation: true, sandbox: true,
+  });
+  assert.equal(contents.handlers.open({ url: 'about:blank' }).action, 'allow');
+  for (const url of ['file:///tmp/test', 'http://example.com/', 'javascript:alert(1)', 'https://user@example.com/']) {
+    assert.equal(contents.handlers.open({ url }).action, 'deny');
+  }
+  for (const url of ['https://microsoft365.com.example.com/', 'file:///dashboard.html', 'https://example.com/']) {
+    contents.url = url;
+    assert.equal(contents.handlers.open({ url: 'https://example.com/' }).action, 'deny');
+  }
+  const child = createContents('https://tenant.sharepoint.com/');
+  contents.handlers['did-create-window']({ webContents: child });
+  assert.equal(child.handlers.open({ url: 'https://word.office.com/' }).action, 'allow');
+  let prevented = false;
+  child.handlers['will-redirect']({ preventDefault: () => { prevented = true; } }, 'file:///tmp/test');
+  assert.equal(prevented, true);
+  prevented = false;
+  child.handlers['will-navigate']({ preventDefault: () => { prevented = true; } }, 'https://login.microsoftonline.com/');
+  assert.equal(prevented, false);
 });

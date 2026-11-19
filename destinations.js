@@ -1,13 +1,14 @@
 'use strict';
 
 const destinations = {
-  dashboard: { title: 'Dashboard', file: 'dashboard.html' },
+  dashboard: { title: 'Office Dashboard', file: 'dashboard.html' },
   microsoft365: { title: 'Microsoft 365', url: 'https://www.microsoft365.com/' },
   outlook: { title: 'Outlook', url: 'https://outlook.office365.com/' },
   outlookPersonal: { title: 'Outlook', url: 'https://outlook.live.com/mail/' },
 };
 
 function destinationFromArgs(args) {
+  args = args.filter((arg) => arg !== '--ozone-platform=wayland' && arg !== '--disable-vulkan');
   if (args.length > 1) {
     throw new Error('Only one destination can be specified');
   }

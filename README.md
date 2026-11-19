@@ -1,28 +1,38 @@
 # Office365Wrapper
 
-A minimal Electron desktop shell for [Microsoft 365](https://www.microsoft365.com/)
-and Outlook on the web.
+A desktop shell for [Microsoft 365](https://www.microsoft365.com/) and Outlook
+on the web. Linux has a Rust/Tauri build using WebKitGTK; the existing Electron
+version is also available.
 
 ## Requirements
 
-- Node.js 22.12 or later and npm
-- Windows, macOS, or Linux with a graphical desktop and Electron's platform dependencies
+- Linux with a graphical desktop, Rust and Cargo, and WebKitGTK development libraries
 - An internet connection and a Microsoft account or eligible organizational account
 
-## Run
+On Debian/Ubuntu, install the Linux build dependencies:
 
 ```sh
-npm install
-npm start
+sudo apt install build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+  librsvg2-dev libxdo-dev libssl-dev
 ```
 
-On filesystems that do not support symlinks, use `npm install --no-bin-links`.
-Keep Electron updated to receive Chromium security fixes.
+## Build and run the Linux Tauri app
 
-The dashboard opens by default and provides shortcuts to Microsoft 365,
-Outlook, Word, Excel, PowerPoint, OneNote, Copilot, and To Do on the web. These
+WebKitGTK uses the desktop's native Wayland or X11 backend; Chromium's
+`--ozone-platform` and `--disable-vulkan` options do not apply.
+
+```sh
+cargo build --release --manifest-path src-tauri/Cargo.toml
+./src-tauri/target/release/office-dashboard
+```
+
+The build produces a native executable; it does not create an installer.
+Keep WebKitGTK updated through your distribution for security fixes.
+
+The Office Dashboard opens by default and provides shortcuts to Microsoft 365,
+Outlook, OneDrive, Word, Excel, PowerPoint, OneNote, Copilot, and To Do on the web. These
 web apps require internet access and may require sign-in or an eligible license.
-Use **Navigate > Dashboard** to return to it.
+Use **Navigate > Office Dashboard** to return to it.
 
 Use the **Navigate** menu to switch between Microsoft 365, Outlook for work,
 school, or personal accounts. Switching pages may discard unsaved changes.
@@ -31,13 +41,13 @@ To open an app directly instead:
 
 ```sh
 # Microsoft 365
-npm start -- --microsoft365
+./src-tauri/target/release/office-dashboard --microsoft365
 
 # Work or school account
-npm start -- --outlook
+./src-tauri/target/release/office-dashboard --outlook
 
 # Personal Outlook.com, Hotmail, or Live account
-npm start -- --outlook-personal
+./src-tauri/target/release/office-dashboard --outlook-personal
 ```
 
 Mail and calendar are provided by the Outlook website; the shell does not
@@ -45,7 +55,7 @@ provide native mail synchronization.
 
 ## Graph search setup
 
-The dashboard can search mail, calendar events, and accessible OneDrive and
+The Office Dashboard can search mail, calendar events, and accessible OneDrive and
 SharePoint files using Microsoft Graph. This search API supports work or school
 accounts in the global Microsoft cloud, not personal Microsoft accounts.
 
@@ -60,21 +70,18 @@ accounts in the global Microsoft cloud, not personal Microsoft accounts.
 
    ```sh
    export OFFICE365_CLIENT_ID="your-client-id"
-   npm start
+   ./src-tauri/target/release/office-dashboard
    ```
 
-   In PowerShell, use `$env:OFFICE365_CLIENT_ID = "your-client-id"` instead of
-   `export`.
-
-Enter a query in the dashboard and sign in through the system browser when
+Enter a query in the Office Dashboard and sign in through the system browser when
 prompted. Graph sign-in is separate from website sign-in. Search returns up to
 25 results per category, with errors shown per category; some results may not
 include a direct link. Microsoft Search indexes the user's own mailbox and
 primary calendar, not delegated mailboxes or To Do tasks. The app keeps Graph
 tokens in memory only. **Sign out of Graph** clears that in-memory account but
-does not sign out the browser or Microsoft websites. If the sign-in browser
-window is closed before completing authentication, restart the app to cancel
-the pending sign-in.
+does not sign out the browser or Microsoft websites. In the Tauri app, an
+expired token requires another sign-in, and an unfinished sign-in times out
+after five minutes.
 
 ## Sign in
 
@@ -82,27 +89,41 @@ Select **Sign in** on the Microsoft 365 or Outlook page and follow
 Microsoft's prompts, including any required multifactor authentication. Sign
 out or switch accounts using the website's account menu.
 
-Electron stores its own persistent browser profile, including sign-in cookies,
-in its user-data directory (for example, `%APPDATA%\office365-wrapper` on
-Windows). It does not import the previous WebView2 profile, so sign in again
-after upgrading. The shell does not collect passwords. Organizational policies
-may restrict sign-in from embedded browsers.
+The Tauri app stores its WebKit profile and sign-in cookies in
+`~/.local/share/com.office365wrapper.dashboard/webkit` (or under
+`$XDG_DATA_HOME`). It does not import Electron or WebView2 cookies, so sign in
+again after switching. The shell does not collect passwords. Organizational
+policies may restrict sign-in from embedded browsers.
 
 ## Notifications
 
 Select **Notifications > Enable Microsoft website notifications for this
 session**, then use **Navigate > Reload** and enable notifications in Outlook
 if prompted. Notifications require OS notification permission and depend on
-the website. Permission is limited to Microsoft 365 and Outlook origins and
-resets when the app exits. Reloading may discard unsaved
+the website. Permission is enabled only while a Microsoft 365 or Outlook page is
+the top-level page and resets when the app exits. WebKitGTK does not expose
+the requesting frame's origin in notification permission requests, so embedded
+frames on those pages may also receive permission. Reloading may discard unsaved
 changes. Background delivery while a different page is open is not guaranteed;
 closing the window exits the app.
 
-On Windows, when running from source, pin
-`node_modules\electron\dist\electron.exe` to the Start menu for notifications.
-Packaged apps need a Start menu shortcut with the appropriate AppUserModelID.
+Microsoft pages can open HTTPS links (including app-launcher links) and
+`about:blank` popups in separate WebKit windows. Other sites cannot open
+new windows, and insecure navigation is blocked. Popup windows close with their
+opener. Camera, microphone, and other website permissions remain blocked.
+Closing all windows exits the app.
 
-New-window requests and other website permissions are blocked; workflows
-requiring popups, camera, microphone, or other permissions are not supported.
-Closing the window exits the app. Electron bundles Chromium, so the WebView2
-Runtime is not required.
+## Electron version
+
+The original Electron version remains available for Windows, macOS, and Linux
+with Node.js 22.12 or later:
+
+```sh
+npm install
+npm start
+```
+
+On filesystems without symlink support, use `npm install --no-bin-links`. On
+Linux/Wayland, `npm run start:wayland` uses the Chromium Wayland flags.
+Use `npm start -- --outlook` (or `--microsoft365` / `--outlook-personal`) for a
+direct launch. Electron keeps a separate browser profile and Graph session.

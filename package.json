@@ -6,6 +6,7 @@
   "main": "main.js",
   "scripts": {
     "start": "node node_modules/electron/cli.js .",
+    "start:wayland": "node node_modules/electron/cli.js . --ozone-platform=wayland --disable-vulkan",
     "test": "node --test"
   },
   "engines": {
