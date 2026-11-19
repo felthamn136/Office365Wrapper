@@ -1,6 +1,6 @@
 # Office365Wrapper
 
-![Office365Wrapper: Microsoft 365 on Linux](./readme-banner.png)
+![Office365Wrapper: Microsoft 365 on Linux](./assets/readme-banner.png)
 
 A Linux desktop shell for [Microsoft 365](https://www.microsoft365.com/) and
 Outlook on the web, built with Rust/Tauri and WebKitGTK.
@@ -43,7 +43,7 @@ build the portable bundle:
 
 ```sh
 cargo install tauri-cli --version "^2" --locked
-cargo tauri build --bundles appimage
+cargo tauri build --config packaging/linux/tauri.conf.json --bundles appimage
 ```
 
 The AppImage is created under `src-tauri/target/release/bundle/appimage/`

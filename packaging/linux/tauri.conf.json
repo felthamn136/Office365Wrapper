@@ -1,0 +1,13 @@
+{
+  "bundle": {
+    "active": true,
+    "targets": ["appimage"],
+    "category": "Productivity",
+    "shortDescription": "Microsoft 365 on Linux",
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    }
+  }
+}

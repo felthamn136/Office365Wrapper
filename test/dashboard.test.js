@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const vm = require('node:vm');
 
 test('dashboard links open the supported Microsoft web apps', () => {
-  const html = fs.readFileSync(path.join(__dirname, '../dashboard.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../assets/dashboard/dashboard.html'), 'utf8');
   const links = [...html.matchAll(/<a\s+[^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(links, [
     'https://www.microsoft365.com/',
@@ -25,18 +25,19 @@ test('dashboard links open the supported Microsoft web apps', () => {
 
 test('the watermark is available to the dashboard and bundled by Tauri', () => {
   const root = path.join(__dirname, '..');
-  const css = fs.readFileSync(path.join(root, 'dashboard.css'), 'utf8');
+  const dashboard = path.join(root, 'assets/dashboard');
+  const css = fs.readFileSync(path.join(dashboard, 'dashboard.css'), 'utf8');
   const image = css.match(/url\(["']?([^"')]+)["']?\)/)?.[1];
   assert.ok(image, 'dashboard CSS references a watermark image');
-  assert.ok(fs.statSync(path.join(root, image)).isFile());
+  assert.ok(fs.statSync(path.join(dashboard, image)).isFile());
   const config = JSON.parse(fs.readFileSync(path.join(root, 'src-tauri/tauri.conf.json'), 'utf8'));
-  assert.ok(config.build.frontendDist.includes(`../${image}`));
+  assert.ok(config.build.frontendDist.includes(`../assets/dashboard/${image}`));
   assert.match(config.app.security.csp, /img-src 'self'/);
-  assert.match(fs.readFileSync(path.join(root, 'dashboard.html'), 'utf8'), /img-src 'self'/);
+  assert.match(fs.readFileSync(path.join(dashboard, 'dashboard.html'), 'utf8'), /img-src 'self'/);
 });
 
 test('Graph search uses Tauri IPC and is disabled outside Tauri', async () => {
-  const script = fs.readFileSync(path.join(__dirname, '../search.js'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '../assets/dashboard/search.js'), 'utf8');
   const elements = Object.fromEntries(
     ['search-form', 'search-query', 'search-submit', 'search-signout', 'search-status', 'search-results']
       .map((id) => [id, {

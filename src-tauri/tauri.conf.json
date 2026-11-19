@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.office365wrapper.dashboard",
   "build": {
-    "frontendDist": ["../dashboard.html", "../dashboard.css", "../dashboard-watermark.png", "../search.js"]
+    "frontendDist": ["../assets/dashboard/dashboard.html", "../assets/dashboard/dashboard.css", "../assets/dashboard/dashboard-watermark.png", "../assets/dashboard/search.js"]
   },
   "app": {
     "withGlobalTauri": true,
@@ -14,15 +14,7 @@
     }
   },
   "bundle": {
-    "active": true,
-    "targets": ["appimage"],
-    "category": "Productivity",
-    "shortDescription": "Microsoft 365 on Linux",
-    "icon": ["icons/128x128.png", "icons/256x256.png", "icons/512x512.png"],
-    "linux": {
-      "appimage": {
-        "bundleMediaFramework": true
-      }
-    }
+    "active": false,
+    "icon": ["../assets/icons/128x128.png", "../assets/icons/256x256.png", "../assets/icons/512x512.png"]
   }
 }
