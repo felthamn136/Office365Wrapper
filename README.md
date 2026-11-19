@@ -17,7 +17,7 @@ sudo apt install build-essential libwebkit2gtk-4.1-dev libayatana-appindicator3-
   librsvg2-dev libxdo-dev libssl-dev
 ```
 
-## Build and run the Linux Tauri app
+## Build and run
 
 WebKitGTK uses the desktop's native Wayland or X11 backend; Chromium's
 `--ozone-platform` and `--disable-vulkan` options do not apply.
@@ -27,10 +27,39 @@ cargo build --release --manifest-path src-tauri/Cargo.toml
 ./src-tauri/target/release/office-dashboard
 ```
 
-The build produces a native executable; it does not create an installer.
-Keep WebKitGTK updated through your distribution for security fixes.
+This builds a native executable using the system WebKitGTK libraries.
 If the project filesystem cannot support Cargo's build files, set
 `CARGO_TARGET_DIR` to a directory on a local filesystem before building.
+
+### AppImage
+
+Install `patchelf` and the GStreamer plugins needed for media playback on the
+build system (for example, `gstreamer1.0-plugins-base` and
+`gstreamer1.0-plugins-good` on Debian/Ubuntu). Then install the Tauri CLI and
+build the portable bundle:
+
+```sh
+cargo install tauri-cli --version "^2" --locked
+cargo tauri build --bundles appimage
+```
+
+The AppImage is created under `src-tauri/target/release/bundle/appimage/`
+(or under `CARGO_TARGET_DIR` if set). Make it executable and launch it, for
+example on x86-64:
+
+```sh
+chmod +x "src-tauri/target/release/bundle/appimage/Office Dashboard_0.1.0_amd64.AppImage"
+"src-tauri/target/release/bundle/appimage/Office Dashboard_0.1.0_amd64.AppImage"
+```
+
+The bundle includes the application icon, WebKitGTK dependencies, and available
+GStreamer media plugins. AppImages may need FUSE 2; if FUSE is unavailable, pass
+`--appimage-extract-and-run` to the AppImage instead. Desktop-menu integration
+depends on the desktop environment or an AppImage integration tool.
+
+Build on the oldest Linux distribution you intend to support: an AppImage
+built on a newer system may not run on older systems because of glibc
+compatibility. Rebuild the AppImage to pick up WebKitGTK security updates.
 
 The Office Dashboard opens by default and provides shortcuts to Microsoft 365,
 Outlook, OneDrive, Word, Excel, PowerPoint, OneNote, Copilot, and To Do on the web. These
