@@ -4,7 +4,6 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
-const vm = require('node:vm');
 
 test('dashboard links open the supported Microsoft web apps', () => {
   const html = fs.readFileSync(path.join(__dirname, '../assets/dashboard/dashboard.html'), 'utf8');
@@ -33,37 +32,19 @@ test('the watermark is available to the dashboard and bundled by Tauri', () => {
   const config = JSON.parse(fs.readFileSync(path.join(root, 'src-tauri/tauri.conf.json'), 'utf8'));
   assert.ok(config.build.frontendDist.includes(`../assets/dashboard/${image}`));
   assert.match(config.app.security.csp, /img-src 'self'/);
-  assert.match(fs.readFileSync(path.join(dashboard, 'dashboard.html'), 'utf8'), /img-src 'self'/);
+  const html = fs.readFileSync(path.join(dashboard, 'dashboard.html'), 'utf8');
+  assert.match(html, /img-src 'self'/);
+  assert.doesNotMatch(config.app.security.csp, /connect-src ipc:/);
+  assert.doesNotMatch(html, /connect-src ipc:/);
 });
 
-test('Graph search uses Tauri IPC and is disabled outside Tauri', async () => {
-  const script = fs.readFileSync(path.join(__dirname, '../assets/dashboard/search.js'), 'utf8');
-  const elements = Object.fromEntries(
-    ['search-form', 'search-query', 'search-submit', 'search-signout', 'search-status', 'search-results']
-      .map((id) => [id, {
-        addEventListener(type, handler) { this[type] = handler; },
-        replaceChildren() {},
-      }]),
-  );
-  const calls = [];
-  const document = { getElementById: (id) => elements[id] };
-  const obsoleteBridge = { search() { throw new Error('Electron bridge must not be used'); } };
-  vm.runInNewContext(script, {
-    document,
-    window: { graphSearch: obsoleteBridge, __TAURI__: { core: { invoke: async (...args) => {
-      calls.push(args);
-      return [];
-    } } } },
-  });
-  elements['search-query'].value = 'project';
-  await elements['search-form'].submit({ preventDefault() {} });
-  await elements['search-signout'].click();
-  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
-    ['graph_search', { query: 'project' }],
-    ['graph_sign_out'],
-  ]);
-  vm.runInNewContext(script, { document, window: { graphSearch: obsoleteBridge } });
-  assert.equal(elements['search-submit'].disabled, true);
-  assert.equal(elements['search-signout'].disabled, true);
-  assert.equal(elements['search-status'].textContent, 'Graph search is available in the desktop app.');
+test('dashboard no longer bundles workspace search', () => {
+  const root = path.join(__dirname, '..');
+  const html = fs.readFileSync(path.join(root, 'assets/dashboard/dashboard.html'), 'utf8');
+  const config = JSON.parse(fs.readFileSync(path.join(root, 'src-tauri/tauri.conf.json'), 'utf8'));
+  const cargo = fs.readFileSync(path.join(root, 'src-tauri/Cargo.toml'), 'utf8');
+  assert.doesNotMatch(html, /search your workspace|search-form|search-results/i);
+  assert.ok(!config.build.frontendDist.includes('../assets/dashboard/search.js'));
+  assert.equal(config.app.withGlobalTauri, undefined);
+  assert.doesNotMatch(cargo, /reqwest|serde_json|base64|sha2|rand/);
 });

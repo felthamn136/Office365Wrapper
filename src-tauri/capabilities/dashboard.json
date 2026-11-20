@@ -1,6 +1,0 @@
-{
-  "identifier": "dashboard",
-  "description": "Graph commands for the bundled dashboard only",
-  "windows": ["main"],
-  "permissions": ["allow-graph-search", "allow-graph-sign-out"]
-}

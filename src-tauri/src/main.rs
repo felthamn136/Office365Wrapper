@@ -1,5 +1,3 @@
-mod graph;
-
 use std::{
     os::unix::fs::DirBuilderExt,
     process::Command,
@@ -19,6 +17,11 @@ struct AppState {
     notifications: AtomicBool,
 }
 
+const OUTLOOK_USER_AGENT: &str = concat!(
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ",
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15"
+);
+
 fn secure_url(url: &Url) -> bool {
     url.scheme() == "https" && url.username().is_empty() && url.password().is_none()
 }
@@ -28,7 +31,9 @@ fn outlook_browser_url(url: &Url) -> Option<&'static str> {
         return None;
     }
     match url.host_str()? {
-        "outlook.office365.com" | "outlook.office.com" => Some("https://outlook.office.com/"),
+        "outlook.office365.com" | "outlook.office.com" | "outlook.cloud.microsoft" => {
+            Some("https://outlook.office.com/")
+        }
         "outlook.live.com" => Some("https://outlook.live.com/mail/"),
         _ => None,
     }
@@ -85,6 +90,21 @@ fn allow_navigation(url: &Url) -> bool {
     secure_url(url) || *url == dashboard_url() || url.as_str() == "about:blank"
 }
 
+fn route_to_outlook_window(url: &Url, outlook_window: bool) -> bool {
+    !outlook_window && outlook_browser_url(url).is_some()
+}
+
+fn open_outlook_window(app: &AppHandle, url: Url) -> tauri::Result<()> {
+    if let Some(window) = app.get_webview_window("outlook") {
+        window.navigate(url)?;
+        window.show()?;
+        window.set_focus()?;
+    } else {
+        create_window(app, "outlook", WebviewUrl::External(url), None, true)?;
+    }
+    Ok(())
+}
+
 fn install_permissions(window: &WebviewWindow) -> tauri::Result<()> {
     let app = window.app_handle().clone();
     window.with_webview(move |platform| {
@@ -130,6 +150,7 @@ fn create_window(
     label: &str,
     initial: WebviewUrl,
     features: Option<NewWindowFeatures>,
+    outlook_window: bool,
 ) -> tauri::Result<WebviewWindow> {
     let profile = app.path().app_data_dir()?.join("webkit");
     std::fs::DirBuilder::new()
@@ -137,15 +158,26 @@ fn create_window(
         .mode(0o700)
         .create(&profile)?;
     let handle = app.clone();
+    let navigation_handle = app.clone();
     let parent_label = label.to_owned();
     let builder = WebviewWindowBuilder::new(app, label, initial)
-        .title("Office Dashboard")
+        .title(if outlook_window {
+            "Office365Wrapper - Outlook"
+        } else {
+            "Office365Wrapper"
+        })
         .inner_size(1200.0, 800.0)
         .data_directory(profile)
-        .on_navigation(|url| {
-            if outlook_browser_url(url).is_some() {
-                if let Err(error) = open_outlook_in_browser(url) {
-                    eprintln!("Could not open Outlook in the default browser: {error}");
+        .on_navigation(move |url| {
+            if route_to_outlook_window(url, outlook_window) {
+                let app = navigation_handle.clone();
+                let url = url.clone();
+                if let Err(error) = navigation_handle.run_on_main_thread(move || {
+                    if let Err(error) = open_outlook_window(&app, url) {
+                        eprintln!("Could not open Outlook in the app: {error}");
+                    }
+                }) {
+                    eprintln!("Could not schedule Outlook navigation: {error}");
                 }
                 false
             } else {
@@ -169,6 +201,7 @@ fn create_window(
                 &child_label,
                 WebviewUrl::External("about:blank".parse().expect("valid URL")),
                 Some(features),
+                outlook_window,
             ) {
                 Ok(child) => {
                     if let Some(parent) = handle.get_webview_window(&parent_label) {
@@ -189,6 +222,11 @@ fn create_window(
                 }
             }
         });
+    let builder = if outlook_window {
+        builder.user_agent(OUTLOOK_USER_AGENT)
+    } else {
+        builder
+    };
     let builder = if let Some(features) = features {
         builder.window_features(features)
     } else {
@@ -220,29 +258,26 @@ fn initial_url() -> Result<WebviewUrl, String> {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let initial = match initial_url().map_err(std::io::Error::other)? {
+    let (initial, outlook) = match initial_url().map_err(std::io::Error::other)? {
         WebviewUrl::External(url) if outlook_browser_url(&url).is_some() => {
-            open_outlook_in_browser(&url)?;
-            WebviewUrl::App("dashboard.html".into())
+            (WebviewUrl::App("dashboard.html".into()), Some(url))
         }
-        initial => initial,
+        initial => (initial, None),
     };
     tauri::Builder::default()
         .manage(AppState {
             notifications: AtomicBool::new(false),
         })
-        .manage(graph::GraphState::new()?)
-        .invoke_handler(tauri::generate_handler![
-            graph::graph_search,
-            graph::graph_sign_out
-        ])
         .setup(move |app| {
             let handle = app.handle();
             let navigate = SubmenuBuilder::new(handle, "Navigate")
                 .text("dashboard", "Office Dashboard")
-                .text("microsoft365", "Microsoft 365")
+                .text("copilot", "Copilot")
                 .text("outlook", "Outlook (work or school)")
                 .text("personal", "Outlook (personal)")
+                .separator()
+                .text("outlook-browser", "Outlook (work or school) in browser")
+                .text("personal-browser", "Outlook (personal) in browser")
                 .separator()
                 .text("reload", "Reload")
                 .build()?;
@@ -266,7 +301,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .items(&[&navigate, &notifications, &edit])
                     .build()?,
             )?;
-            create_window(handle, "main", initial, None)?;
+            create_window(handle, "main", initial, None, false)?;
+            if let Some(url) = outlook {
+                open_outlook_window(handle, url)?;
+            }
             Ok(())
         })
         .on_menu_event(|app, event| {
@@ -275,23 +313,57 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 state.notifications.fetch_xor(true, Ordering::Relaxed);
                 return;
             }
-            if let Some(window) = app.get_webview_window("main") {
-                let url = match event.id().as_ref() {
-                    "dashboard" => Some(dashboard_url()),
-                    "microsoft365" => Some("https://www.microsoft365.com/".parse().unwrap()),
-                    "outlook" => Some("https://outlook.office365.com/".parse().unwrap()),
-                    "personal" => Some("https://outlook.live.com/mail/".parse().unwrap()),
-                    "reload" => {
-                        if let Err(error) = window.reload() {
-                            eprintln!("Could not reload page: {error}");
-                        }
-                        None
+            let outlook_url = match event.id().as_ref() {
+                "outlook" | "outlook-browser" => Some("https://outlook.office365.com/"),
+                "personal" | "personal-browser" => Some("https://outlook.live.com/mail/"),
+                _ => None,
+            };
+            if let Some(url) = outlook_url {
+                let url = url.parse().expect("valid Outlook URL");
+                if matches!(event.id().as_ref(), "outlook-browser" | "personal-browser") {
+                    if let Err(error) = open_outlook_in_browser(&url) {
+                        eprintln!("Could not open Outlook in the default browser: {error}");
                     }
-                    _ => None,
-                };
-                if let Some(url) = url {
+                } else if let Err(error) = open_outlook_window(app, url) {
+                    eprintln!("Could not open Outlook in the app: {error}");
+                }
+                return;
+            }
+            if event.id().as_ref() == "reload" {
+                for window in app.webview_windows().into_values() {
+                    match window.is_focused() {
+                        Ok(true) => {
+                            if let Err(error) = window.reload() {
+                                eprintln!("Could not reload page: {error}");
+                            }
+                            break;
+                        }
+                        Ok(false) => {}
+                        Err(error) => eprintln!("Could not determine focused window: {error}"),
+                    }
+                }
+                return;
+            }
+            let url = match event.id().as_ref() {
+                "dashboard" => Some(dashboard_url()),
+                "copilot" => Some("https://copilot.cloud.microsoft/".parse().unwrap()),
+                _ => None,
+            };
+            if let Some(url) = url {
+                if let Some(window) = app.get_webview_window("main") {
                     if let Err(error) = window.navigate(url) {
                         eprintln!("Could not navigate: {error}");
+                    } else if let Err(error) = window.set_focus() {
+                        eprintln!("Could not focus dashboard window: {error}");
+                    }
+                } else {
+                    let initial = if url == dashboard_url() {
+                        WebviewUrl::App("dashboard.html".into())
+                    } else {
+                        WebviewUrl::External(url)
+                    };
+                    if let Err(error) = create_window(app, "main", initial, None, false) {
+                        eprintln!("Could not reopen dashboard window: {error}");
                     }
                 }
             }
@@ -355,6 +427,30 @@ mod tests {
             "https://www.microsoft365.com/",
         ] {
             assert_eq!(outlook_browser_url(&Url::parse(value).unwrap()), None);
+        }
+    }
+
+    #[test]
+    fn routes_outlook_links_only_from_other_windows() {
+        for value in [
+            "https://outlook.office365.com/mail/inbox",
+            "https://outlook.office.com/mail/?path=/calendar",
+            "https://outlook.cloud.microsoft/mail/",
+            "https://outlook.live.com/mail/",
+        ] {
+            let url = Url::parse(value).unwrap();
+            assert!(route_to_outlook_window(&url, false));
+            assert!(!route_to_outlook_window(&url, true));
+            assert!(allow_navigation(&url));
+        }
+        for value in [
+            "https://login.microsoftonline.com/",
+            "http://outlook.office.com/",
+            "https://outlook.office.com.example.com/",
+            "https://outlook.office.com:444/",
+            "https://user@outlook.office.com/",
+        ] {
+            assert!(!route_to_outlook_window(&Url::parse(value).unwrap(), false));
         }
     }
 }

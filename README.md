@@ -35,7 +35,8 @@ to a directory on a local filesystem before building.
 ### AppImage
 
 A prebuilt x86-64 [Office Dashboard AppImage](./dist/Office-Dashboard-0.1.0-x86_64.AppImage)
-is available in `dist`.
+is available in `dist`. This older build does not include the recent Outlook
+and desktop-name changes. Rebuild and re-integrate the AppImage to use them.
 
 To build an AppImage, install `patchelf` and the GStreamer plugins needed for
 media playback (for example, `gstreamer1.0-plugins-base` and
@@ -52,14 +53,15 @@ The bundle is created under
 set). For example:
 
 ```sh
-chmod +x "src-tauri/target/release/bundle/appimage/Office Dashboard_0.1.0_amd64.AppImage"
-"src-tauri/target/release/bundle/appimage/Office Dashboard_0.1.0_amd64.AppImage"
+chmod +x "src-tauri/target/release/bundle/appimage/Office365Wrapper_0.1.0_amd64.AppImage"
+"src-tauri/target/release/bundle/appimage/Office365Wrapper_0.1.0_amd64.AppImage"
 ```
 
 The bundle includes the application icon, WebKitGTK dependencies, and available
 GStreamer media plugins. It may require FUSE 2; use
 `--appimage-extract-and-run` if FUSE is unavailable. Desktop-menu integration
 depends on the desktop environment or an AppImage integration tool.
+New bundles use **Office365Wrapper** as the desktop application name.
 
 When using Gear Lever, open a copy of the AppImage from outside its AppImages
 folder before integrating it; Gear Lever may move the selected file. Build on
@@ -73,10 +75,13 @@ The Office Dashboard opens by default with shortcuts to Microsoft 365, Outlook,
 OneDrive, Word, Excel, PowerPoint, OneNote, Copilot, and To Do. The websites may
 require sign-in or an eligible license.
 
-Use the **Navigate** menu to switch between the dashboard and Microsoft 365.
-Outlook for work, school, or personal accounts opens in your default browser
-because Outlook sign-in may not support embedded WebKitGTK. Switching embedded
-pages may discard unsaved changes.
+Use the **Navigate** menu to switch between the dashboard and Copilot.
+Outlook for work, school, or personal accounts opens in a separate app window.
+Outlook's WebKitGTK window identifies itself as Safari for compatibility;
+Microsoft does not officially support WebKitGTK on Linux, so sign-in or some
+features may still fail. If needed, use the **Navigate** menu's Outlook
+**in browser** options to open Outlook in your default browser instead.
+Switching embedded pages may discard unsaved changes.
 
 You can also choose a starting destination from the command line:
 
@@ -84,67 +89,37 @@ You can also choose a starting destination from the command line:
 # Open Microsoft 365 in the app
 ./src-tauri/target/release/office-dashboard --microsoft365
 
-# Open Outlook in your default browser and the dashboard in the app
+# Open Outlook in a separate app window
 ./src-tauri/target/release/office-dashboard --outlook
 ./src-tauri/target/release/office-dashboard --outlook-personal
 ```
 
 Mail and calendar are provided by the Outlook website; the shell does not
-provide native mail synchronization.
-
-## Microsoft Graph search
-
-The dashboard can search mail, calendar events, and accessible OneDrive and
-SharePoint files using Microsoft Graph. This feature supports work or school
-accounts in the global Microsoft cloud, not personal Microsoft accounts.
-
-1. [Register an app in Microsoft Entra ID](https://learn.microsoft.com/entra/identity-platform/quickstart-register-app) for organizational accounts.
-2. Under **Authentication**, add the **Mobile and desktop applications**
-   platform, set the redirect URI to `http://localhost`, and enable public
-   client flows.
-3. Under **API permissions**, add the delegated Microsoft Graph permissions
-   `Mail.Read`, `Calendars.Read`, and `Files.Read.All`. Your organization may
-   require administrator consent.
-4. Set `OFFICE365_CLIENT_ID` to the app's **Application (client) ID** before
-   starting the dashboard. No client secret is needed:
-
-   ```sh
-   export OFFICE365_CLIENT_ID="your-client-id"
-   ./src-tauri/target/release/office-dashboard
-   ```
-
-When prompted, sign in through the system browser. Graph sign-in is separate
-from website sign-in. Search returns up to 25 results per category and reports
-errors per category; some results may not include a direct link. Microsoft
-Search indexes the user's own mailbox and primary calendar, not delegated
-mailboxes or To Do tasks.
-
-Graph tokens are kept in memory only. **Sign out of Graph** clears the Graph
-session but does not sign out of the browser or Microsoft websites. An expired
-token requires another sign-in, and an unfinished sign-in times out after five
-minutes.
+provide native mail synchronization or dashboard-wide search. Use the search
+features in the Microsoft websites.
 
 ## Sign-in and browser data
 
-Select **Sign in** on the Microsoft 365 page or in the browser opened for
-Outlook, then follow Microsoft's prompts, including any required multifactor
-authentication. Sign out or switch accounts using the website's account menu.
-The shell does not collect passwords.
+Select **Sign in** on the Microsoft 365 or Outlook page, then follow Microsoft's
+prompts, including any required multifactor authentication. Sign out or
+switch accounts using the website's account menu. The shell does not collect
+passwords.
 
 The app stores its WebKit profile and sign-in cookies for embedded Microsoft
 pages in `~/.local/share/com.office365wrapper.dashboard/webkit` (or under
 `$XDG_DATA_HOME`). Cookies are not imported from previous versions, so sign in
-again after switching. Outlook uses your default browser's profile and cookies.
+again after switching. Outlook opened in the default browser uses that
+browser's separate profile and cookies.
 
 ## Notifications and links
 
 To enable notifications, select **Notifications > Enable Microsoft website
 notifications for this session**, then use **Navigate > Reload** and enable
-notifications on the Microsoft 365 page if prompted. Notifications require OS
-permission and depend on the website. Permission is enabled only while a
-Microsoft 365 page is active and resets when the app exits. WebKitGTK does not
-expose the requesting frame's origin, so embedded frames on that page may also
-receive permission.
+notifications on the Microsoft 365 or Outlook page if prompted. Reload applies
+to the focused app window. Notifications require OS permission and depend on
+the website. Permission is enabled only on supported Microsoft 365 and Outlook
+pages and resets when the app exits. WebKitGTK does not expose the requesting
+frame's origin, so embedded frames on that page may also receive permission.
 
 Microsoft pages can open HTTPS links (including app-launcher links) and
 `about:blank` popups in separate WebKit windows. Other sites cannot open new
