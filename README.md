@@ -34,9 +34,8 @@ to a directory on a local filesystem before building.
 
 ### AppImage
 
-A prebuilt x86-64 [Office Dashboard AppImage](./dist/Office-Dashboard-0.1.0-x86_64.AppImage)
-is available in `dist`. This older build does not include the recent Outlook
-and desktop-name changes. Rebuild and re-integrate the AppImage to use them.
+A prebuilt x86-64 [Office365Wrapper AppImage](./dist/Office365Wrapper_0.1.0_amd64.AppImage)
+is available in `dist`. Re-integrate the AppImage if replacing an older version.
 
 To build an AppImage, install `patchelf` and the GStreamer plugins needed for
 media playback (for example, `gstreamer1.0-plugins-base` and
