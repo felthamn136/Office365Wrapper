@@ -123,6 +123,7 @@ frame's origin, so embedded frames on that page may also receive permission.
 Microsoft pages can open HTTPS links (including app-launcher links) and
 `about:blank` popups in separate WebKit windows. Other sites cannot open new
 windows, and insecure navigation is blocked. Popups close with their opener.
+Popups also close when the website closes them.
 Camera, microphone, and other website permissions remain blocked. Reloading
 may discard unsaved changes, background notification delivery is not
 guaranteed, and closing all windows exits the app.

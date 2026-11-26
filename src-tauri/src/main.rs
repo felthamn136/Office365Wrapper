@@ -145,6 +145,26 @@ fn install_permissions(window: &WebviewWindow) -> tauri::Result<()> {
     })
 }
 
+fn close_window_with_webview(window: &WebviewWindow) -> tauri::Result<()> {
+    let app = window.app_handle().clone();
+    let label = window.label().to_owned();
+    window.with_webview(move |platform| {
+        // Wry destroys the WebKit widget on window.close(), not its native window.
+        platform.inner().connect_local("destroy", false, move |_| {
+            let app = app.clone();
+            let label = label.clone();
+            webkit2gtk::glib::idle_add_local_once(move || {
+                if let Some(window) = app.get_webview_window(&label) {
+                    if let Err(error) = window.close() {
+                        eprintln!("Could not close popup window: {error}");
+                    }
+                }
+            });
+            None
+        });
+    })
+}
+
 fn create_window(
     app: &AppHandle,
     label: &str,
@@ -152,6 +172,7 @@ fn create_window(
     features: Option<NewWindowFeatures>,
     outlook_window: bool,
 ) -> tauri::Result<WebviewWindow> {
+    let popup = features.is_some();
     let profile = app.path().app_data_dir()?.join("webkit");
     std::fs::DirBuilder::new()
         .recursive(true)
@@ -159,6 +180,7 @@ fn create_window(
         .create(&profile)?;
     let handle = app.clone();
     let navigation_handle = app.clone();
+    let navigation_label = label.to_owned();
     let parent_label = label.to_owned();
     let builder = WebviewWindowBuilder::new(app, label, initial)
         .title(if outlook_window {
@@ -172,9 +194,24 @@ fn create_window(
             if route_to_outlook_window(url, outlook_window) {
                 let app = navigation_handle.clone();
                 let url = url.clone();
+                let label = navigation_label.clone();
                 if let Err(error) = navigation_handle.run_on_main_thread(move || {
                     if let Err(error) = open_outlook_window(&app, url) {
                         eprintln!("Could not open Outlook in the app: {error}");
+                    } else if popup {
+                        webkit2gtk::glib::idle_add_local_once(move || {
+                            if let Some(window) = app.get_webview_window(&label) {
+                                match window.url() {
+                                    Ok(url) if url.as_str() == "about:blank" => {
+                                        if let Err(error) = window.close() {
+                                            eprintln!("Could not close blank popup: {error}");
+                                        }
+                                    }
+                                    Ok(_) => {}
+                                    Err(error) => eprintln!("Could not check popup URL: {error}"),
+                                }
+                            }
+                        });
                     }
                 }) {
                     eprintln!("Could not schedule Outlook navigation: {error}");
@@ -205,11 +242,14 @@ fn create_window(
             ) {
                 Ok(child) => {
                     if let Some(parent) = handle.get_webview_window(&parent_label) {
-                        let popup = child.clone();
+                        let app = handle.clone();
+                        let label = child_label.clone();
                         parent.on_window_event(move |event| {
                             if matches!(event, WindowEvent::Destroyed) {
-                                if let Err(error) = popup.close() {
-                                    eprintln!("Could not close popup: {error}");
+                                if let Some(popup) = app.get_webview_window(&label) {
+                                    if let Err(error) = popup.close() {
+                                        eprintln!("Could not close popup: {error}");
+                                    }
                                 }
                             }
                         });
@@ -234,6 +274,9 @@ fn create_window(
     };
     let window = builder.build()?;
     install_permissions(&window)?;
+    if popup {
+        close_window_with_webview(&window)?;
+    }
     Ok(window)
 }
 
